@@ -10,7 +10,7 @@ import edu.byu.cs.tweeter.model.domain.AuthToken;
 import edu.byu.cs.tweeter.model.domain.Status;
 import edu.byu.cs.tweeter.model.domain.User;
 
-public class FeedPresenter implements FeedService.FeedObserver, UserService.GetUserObserver {
+public class FeedPresenter {
     private User user;
     private AuthToken token;
     private FeedView view;
@@ -35,66 +35,74 @@ public class FeedPresenter implements FeedService.FeedObserver, UserService.GetU
         void navigateToUri(Uri uri);
     }
 
-    @Override
-    public void handleFeedSuccess(List<Status> statuses, boolean hasMorePages) {
-        isLoading = false;
-        view.setLoading(false);
-        if (statuses.size() > 0) {
-            lastStatus = statuses.get(statuses.size()-1);
+    private class FeedObserver implements FeedService.FeedObserver {
+        @Override
+        public void handleSuccess(List<Status> statuses, boolean hasMorePages) {
+            isLoading = false;
+            view.setLoading(false);
+            if (statuses.size() > 0) {
+                lastStatus = statuses.get(statuses.size()-1);
+            }
+            else {
+                lastStatus = null;
+            }
+            view.setStatuses(statuses);
         }
-        else {
-            lastStatus = null;
+
+        @Override
+        public void handleFailure(String message) {
+            isLoading = false;
+            view.setLoading(false);
+            view.displayMessage("Failed to get feed: " + message);
         }
-        view.setStatuses(statuses);
+
+        @Override
+        public void handleException(Exception ex) {
+            isLoading = false;
+            view.setLoading(false);
+            view.displayMessage("Failed to get feed because of exception: " + ex.getMessage());
+        }
     }
 
-    @Override
-    public void handleFeedFailure(String message) {
-        isLoading = false;
-        view.setLoading(false);
-        view.displayMessage("Failed to get feed: " + message);
-    }
+    private class GetUserObserver implements UserService.GetUserObserver {
+        @Override
+        public void handleFailure(String message) {
+            view.displayMessage("Failed to get user's profile: " + message);
+        }
 
-    @Override
-    public void handleFeedThrewException(Exception ex) {
-        isLoading = false;
-        view.setLoading(false);
-        view.displayMessage("Failed to get feed because of exception: " + ex.getMessage());
-    }
+        @Override
+        public void handleException(Exception ex) {
+            view.displayMessage("Failed to get user's profile because of exception: " + ex.getMessage());
+        }
 
-    @Override
-    public void handleGetUserSuccess(User user) {
-        view.displayMessage("Getting user's profile...");
-        view.navigateToUser(user);
-    }
-
-    @Override
-    public void handleGetUserFailed(String message) {
-        view.displayMessage("Failed to get user's profile: " + message);
-    }
-
-    @Override
-    public void handleGetUserThrewException(Exception ex) {
-        view.displayMessage("Failed to get user's profile because of exception: " + ex.getMessage());
+        @Override
+        public void handleSuccess(User user) {
+            view.displayMessage("Getting user's profile...");
+            view.navigateToUser(user);
+        }
     }
 
     public User getUser() {
         return  user;
     }
+
     public AuthToken getToken() {
         return  token;
     }
+
     public boolean isLoading() {
         return isLoading;
     }
+
     public boolean isMorePages() {
         return hasMorePages;
     }
+
     public void loadItems() {
         if (!isLoading) {
             isLoading = true;
             view.setLoading(true);
-            new FeedService().getFeed(token, user, 10, lastStatus, this);
+            new FeedService().getFeed(token, user, 10, lastStatus, new FeedObserver());
         }
     }
     public void selectUser(String clickable) {
@@ -103,7 +111,7 @@ public class FeedPresenter implements FeedService.FeedObserver, UserService.GetU
             view.navigateToUri(uri);
         }
         else {
-            new UserService().getUser(token, clickable, this);
+            new UserService().getUser(token, clickable, new GetUserObserver());
         }
     }
 }

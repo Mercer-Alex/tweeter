@@ -5,7 +5,7 @@ import edu.byu.cs.tweeter.client.model.service.UserService;
 import edu.byu.cs.tweeter.model.domain.AuthToken;
 import edu.byu.cs.tweeter.model.domain.User;
 
-public class LoginPresenter implements UserService.LoginObserver {
+public class LoginPresenter {
 
     private LoginView view;
     public LoginPresenter(LoginView view) {
@@ -28,7 +28,7 @@ public class LoginPresenter implements UserService.LoginObserver {
             view.clearInfoMessage();
             view.clearErrorMessage();
             view.displayInfoMessage("Logging In...");
-            new UserService().login(username, password, this);
+            new UserService().login(username, password, new LoginObserver());
         }
         else {
             view.displayErrorMessage(errorMessage);
@@ -48,22 +48,25 @@ public class LoginPresenter implements UserService.LoginObserver {
         return null;
     }
 
-    @Override
-    public void handleLoginSuccess(User user, AuthToken authToken) {
-        view.clearInfoMessage();
-        view.clearErrorMessage();
+    private class LoginObserver implements UserService.AuthenticationObserver
+    {
+        @Override
+        public void handleSuccess (User user, AuthToken authToken){
+            view.clearInfoMessage();
+            view.clearErrorMessage();
 
-        view.displayInfoMessage("Hello " + Cache.getInstance().getCurrUser().getName());
-        view.navigateToUser(user);
-    }
+            view.displayInfoMessage("Hello " + Cache.getInstance().getCurrUser().getName());
+            view.navigateToUser(user);
+        }
 
-    @Override
-    public void handleLoginThrewException(Exception ex) {
-        view.displayInfoMessage("Failed to login because of exception: " + ex.getMessage());
-    }
+        @Override
+        public void handleException (Exception ex){
+            view.displayInfoMessage("Failed to login because of exception: " + ex.getMessage());
+        }
 
-    @Override
-    public void handleLoginFailure(String message) {
-        view.displayInfoMessage("Failed to login: " + message);
+        @Override
+            public void handleFailure (String message){
+            view.displayInfoMessage("Failed to login: " + message);
+        }
     }
 }

@@ -10,7 +10,7 @@ import edu.byu.cs.tweeter.model.domain.AuthToken;
 import edu.byu.cs.tweeter.model.domain.Status;
 import edu.byu.cs.tweeter.model.domain.User;
 
-public class StoryPresenter implements StoryService.StoryObserver, UserService.GetUserObserver {
+public class StoryPresenter {
     private User user;
     private AuthToken token;
     private StoryView view;
@@ -27,47 +27,52 @@ public class StoryPresenter implements StoryService.StoryObserver, UserService.G
         lastStatus = null;
     }
 
-    @Override
-    public void handleStorySuccess(List<Status> statuses, boolean hasMorePages) {
-        isLoading = false;
-        view.setLoading(false);
-        if (statuses.size() > 0) {
-            lastStatus = statuses.get(statuses.size()-1);
+    private class StoryObserver implements StoryService.StoryObserver {
+        @Override
+        public void handleSuccess(List<Status> statuses, boolean hasMorePages) {
+            isLoading = false;
+            view.setLoading(false);
+            if (statuses.size() > 0) {
+                lastStatus = statuses.get(statuses.size()-1);
+            }
+            else {
+                lastStatus = null;
+            }
+            view.setStatuses(statuses);
         }
-        else {
-            lastStatus = null;
+
+        @Override
+        public void handleFailure(String message) {
+            isLoading = false;
+            view.setLoading(false);
+            view.displayMessage("Failed to get story: " + message);
         }
-        view.setStatuses(statuses);
+
+        @Override
+        public void handleException(Exception ex) {
+            isLoading = false;
+            view.setLoading(false);
+            view.displayMessage("Failed to get story because of exception: " + ex.getMessage());
+        }
     }
 
-    @Override
-    public void handleStoryFailure(String message) {
-        isLoading = false;
-        view.setLoading(false);
-        view.displayMessage("Failed to get story: " + message);
-    }
 
-    @Override
-    public void handleStoryThrewException(Exception ex) {
-        isLoading = false;
-        view.setLoading(false);
-        view.displayMessage("Failed to get story because of exception: " + ex.getMessage());
-    }
+    private class GetUserObserver implements UserService.GetUserObserver {
+        @Override
+        public void handleSuccess(User user) {
+            view.displayMessage("Getting user's profile...");
+            view.navigateToUser(user);
+        }
 
-    @Override
-    public void handleGetUserSuccess(User user) {
-        view.displayMessage("Getting user's profile...");
-        view.navigateToUser(user);
-    }
+        @Override
+        public void handleFailure(String message) {
+            view.displayMessage("Failed to get user's profile: " + message);
+        }
 
-    @Override
-    public void handleGetUserFailed(String message) {
-        view.displayMessage("Failed to get user's profile: " + message);
-    }
-
-    @Override
-    public void handleGetUserThrewException(Exception ex) {
-        view.displayMessage("Failed to get user's profile because of exception: " + ex.getMessage());
+        @Override
+        public void handleException(Exception ex) {
+            view.displayMessage("Failed to get user's profile because of exception: " + ex.getMessage());
+        }
     }
 
     public interface StoryView {
@@ -94,7 +99,7 @@ public class StoryPresenter implements StoryService.StoryObserver, UserService.G
         if (!isLoading) {
             isLoading = true;
             view.setLoading(true);
-            new StoryService().getStory(token, user, 10, lastStatus, this);
+            new StoryService().getStory(token, user, 10, lastStatus, new StoryObserver());
         }
     }
     public void selectUser(String clickable) {
@@ -103,7 +108,7 @@ public class StoryPresenter implements StoryService.StoryObserver, UserService.G
             view.navigateToUri(uri);
         }
         else {
-            new UserService().getUser(token, clickable, this);
+            new UserService().getUser(token, clickable, new GetUserObserver());
         }
     }
 }

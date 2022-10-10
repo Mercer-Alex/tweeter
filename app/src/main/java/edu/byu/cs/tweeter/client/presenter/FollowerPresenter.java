@@ -8,7 +8,7 @@ import edu.byu.cs.tweeter.client.model.service.UserService;
 import edu.byu.cs.tweeter.model.domain.AuthToken;
 import edu.byu.cs.tweeter.model.domain.User;
 
-public class FollowerPresenter implements UserService.GetUserObserver, FollowService.FollowerObserver {
+public class FollowerPresenter {
 
     private User user;
     private AuthToken token;
@@ -37,47 +37,22 @@ public class FollowerPresenter implements UserService.GetUserObserver, FollowSer
         void setLoadingFooter(boolean loading);
     }
 
-    @Override
-    public void handleGetFollowerSuccess(List<User> followers, boolean morePages) {
-        isLoading = false;
-        view.setLoadingFooter(false);
-        if (followers.size() > 0) {
-            lastFollower = followers.get(followers.size()-1);
+    private class GetUserObserver implements UserService.GetUserObserver {
+        @Override
+        public void handleSuccess(User user) {
+            view.displayMessage("Getting user's profile...");
+            view.navigateToUser(user);
         }
-        else {
-            lastFollower = null;
+
+        @Override
+        public void handleFailure(String message) {
+            view.displayMessage("Failed to get user's profile: " + message);
         }
-        view.addItems(followers);
-    }
 
-    @Override
-    public void handleGetFollowerFailure(String message) {
-        isLoading = false;
-        view.setLoadingFooter(false);
-        view.displayMessage("Failed to get followers: " + message);
-    }
-
-    @Override
-    public void handleGetFollowerThrewException(Exception ex) {
-        isLoading = false;
-        view.setLoadingFooter(false);
-        view.displayMessage("Failed to get followers because of exception: " + ex.getMessage());
-    }
-
-    @Override
-    public void handleGetUserSuccess(User user) {
-        view.displayMessage("Getting user's profile...");
-        view.navigateToUser(user);
-    }
-
-    @Override
-    public void handleGetUserFailed(String message) {
-        view.displayMessage("Failed to get user's profile: " + message);
-    }
-
-    @Override
-    public void handleGetUserThrewException(Exception ex) {
-        view.displayMessage("Failed to get user's profile because of exception: " + ex.getMessage());
+        @Override
+        public void handleException(Exception ex) {
+            view.displayMessage("Failed to get user's profile because of exception: " + ex.getMessage());
+        }
     }
 
     public User getUser() {
@@ -96,14 +71,44 @@ public class FollowerPresenter implements UserService.GetUserObserver, FollowSer
         return hasMorePages;
     }
 
+    private class GetFollowersObserver implements FollowService.FollowersObserver {
+
+        @Override
+        public void handleSuccess(List<User> followers, boolean morePages) {
+            isLoading = false;
+            view.setLoadingFooter(false);
+            if (followers.size() > 0) {
+                lastFollower = followers.get(followers.size()-1);
+            }
+            else {
+                lastFollower = null;
+            }
+            view.addItems(followers);
+        }
+
+        @Override
+        public void handleFailure(String message) {
+            isLoading = false;
+            view.setLoadingFooter(false);
+            view.displayMessage("Failed to get followers: " + message);
+        }
+
+        @Override
+        public void handleException(Exception exception) {
+            isLoading = false;
+            view.setLoadingFooter(false);
+            view.displayMessage("Failed to get followers because of exception: " + exception.getMessage());
+        }
+    }
+
     public void loadMoreItems() {
         if (!isLoading) {
             isLoading = true;
             view.setLoadingFooter(true);
-            new FollowService().getFollower(token, user, 10, lastFollower, this);
+            new FollowService().getFollower(token, user, 10, lastFollower, new GetFollowersObserver());
         }
     }
     public void selectUser(String clickable) {
-        new UserService().getUser(token, clickable, this);
+        new UserService().getUser(token, clickable, new GetUserObserver());
     }
 }

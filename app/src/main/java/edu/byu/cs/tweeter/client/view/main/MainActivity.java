@@ -2,8 +2,6 @@ package edu.byu.cs.tweeter.client.view.main;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -14,7 +12,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager.widget.ViewPager;
 
@@ -22,15 +19,12 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
 import com.squareup.picasso.Picasso;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.text.ParseException;
 
 import edu.byu.cs.client.R;
-import edu.byu.cs.tweeter.client.model.service.backgroundTask.PostStatusTask;
 import edu.byu.cs.tweeter.client.cache.Cache;
 import edu.byu.cs.tweeter.client.presenter.MainPresenter;
 import edu.byu.cs.tweeter.client.view.login.LoginActivity;
-import edu.byu.cs.tweeter.client.view.login.StatusDialogFragment;
 import edu.byu.cs.tweeter.model.domain.AuthToken;
 import edu.byu.cs.tweeter.model.domain.Status;
 import edu.byu.cs.tweeter.model.domain.User;
@@ -122,7 +116,6 @@ public class MainActivity extends AppCompatActivity implements StatusDialogFragm
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.logoutMenu) {
-
             presenter.logOutUser();
             return true;
         } else {
@@ -163,23 +156,6 @@ public class MainActivity extends AppCompatActivity implements StatusDialogFragm
     }
 
     @Override
-    public void onStatusPosted(String post) {
-        postingToast = Toast.makeText(this, "Posting Status...", Toast.LENGTH_LONG);
-        postingToast.show();
-
-        //TODO: Pull out of presenter
-        try {
-            Status newStatus = new Status(post, Cache.getInstance().getCurrUser(), presenter.getFormattedDateTime(), presenter.parseURLs(post), presenter.parseMentions(post));
-            PostStatusTask statusTask = new PostStatusTask(Cache.getInstance().getCurrUserAuthToken(),
-                    newStatus, new PostStatusHandler());
-            ExecutorService executor = Executors.newSingleThreadExecutor();
-            executor.execute(statusTask);
-        } catch (Exception ex) {
-            Log.e(LOG_TAG, ex.getMessage(), ex);
-        }
-    }
-
-    @Override
     public void updateFollowButton(boolean removed) {
         // If follow relationship was removed.
         if (removed) {
@@ -202,22 +178,12 @@ public class MainActivity extends AppCompatActivity implements StatusDialogFragm
         followerCount.setText(getString(R.string.followerCount, String.valueOf(count)));
     }
 
-    // PostStatusHandler
-    //TODO:move
-    private class PostStatusHandler extends Handler {
-        @Override
-        public void handleMessage(@NonNull Message msg) {
-            boolean success = msg.getData().getBoolean(PostStatusTask.SUCCESS_KEY);
-            if (success) {
-                postingToast.cancel();
-                Toast.makeText(MainActivity.this, "Successfully Posted!", Toast.LENGTH_LONG).show();
-            } else if (msg.getData().containsKey(PostStatusTask.MESSAGE_KEY)) {
-                String message = msg.getData().getString(PostStatusTask.MESSAGE_KEY);
-                Toast.makeText(MainActivity.this, "Failed to post status: " + message, Toast.LENGTH_LONG).show();
-            } else if (msg.getData().containsKey(PostStatusTask.EXCEPTION_KEY)) {
-                Exception ex = (Exception) msg.getData().getSerializable(PostStatusTask.EXCEPTION_KEY);
-                Toast.makeText(MainActivity.this, "Failed to post status because of exception: " + ex.getMessage(), Toast.LENGTH_LONG).show();
-            }
+    @Override
+    public void onStatusPosted(String post) {
+        try {
+            presenter.statusPosted(post);
+        } catch (ParseException e) {
+            e.printStackTrace();
         }
     }
 }

@@ -5,7 +5,7 @@ import edu.byu.cs.tweeter.client.model.service.UserService;
 import edu.byu.cs.tweeter.model.domain.AuthToken;
 import edu.byu.cs.tweeter.model.domain.User;
 
-public class RegisterPresenter implements UserService.RegisterObserver {
+public class RegisterPresenter {
 
     private RegisterView view;
     public RegisterPresenter(RegisterView view) {
@@ -28,7 +28,7 @@ public class RegisterPresenter implements UserService.RegisterObserver {
             view.clearInfoMessage();
             view.clearErrorMessage();
             view.displayInfoMessage("Registering...");
-            new UserService().register(firstName, lastName, alias, password, image, this);
+            new UserService().register(firstName, lastName, alias, password, image, new RegisterObserver());
         }
         else {
             view.displayErrorMessage(errorMessage);
@@ -61,22 +61,24 @@ public class RegisterPresenter implements UserService.RegisterObserver {
         return null;
     }
 
-    @Override
-    public void handleRegisterSuccess(User user, AuthToken token) {
-        view.clearInfoMessage();
-        view.clearErrorMessage();
+    private class RegisterObserver implements UserService.AuthenticationObserver {
+        @Override
+        public void handleSuccess(User user, AuthToken token) {
+            view.clearInfoMessage();
+            view.clearErrorMessage();
 
-        view.displayInfoMessage("Hello " + Cache.getInstance().getCurrUser().getName());
-        view.navigateToUser(user);
-    }
+            view.displayInfoMessage("Hello " + Cache.getInstance().getCurrUser().getName());
+            view.navigateToUser(user);
+        }
 
-    @Override
-    public void handleRegisterFailure(String message) {
-        view.displayInfoMessage("Failed to register: " + message);
-    }
+        @Override
+        public void handleFailure(String message) {
+            view.displayInfoMessage("Failed to register: " + message);
+        }
 
-    @Override
-    public void handleRegisterThrewException(Exception ex) {
-        view.displayInfoMessage("Failed to register because of exception: " + ex.getMessage());
+        @Override
+        public void handleException(Exception ex) {
+            view.displayInfoMessage("Failed to register because of exception: " + ex.getMessage());
+        }
     }
 }

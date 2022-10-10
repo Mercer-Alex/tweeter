@@ -31,6 +31,7 @@ import edu.byu.cs.tweeter.client.model.service.backgroundTask.GetUserTask;
 import edu.byu.cs.tweeter.client.cache.Cache;
 import edu.byu.cs.tweeter.client.presenter.FollowingPresenter;
 import edu.byu.cs.tweeter.client.view.main.MainActivity;
+import edu.byu.cs.tweeter.model.domain.AuthToken;
 import edu.byu.cs.tweeter.model.domain.User;
 
 /**
@@ -73,6 +74,7 @@ public class FollowingFragment extends Fragment implements FollowingPresenter.Fo
         View view = inflater.inflate(R.layout.fragment_following, container, false);
 
         user = (User) getArguments().getSerializable(USER_KEY);
+        AuthToken token = Cache.getInstance().getCurrUserAuthToken();
 
         RecyclerView followingRecyclerView = view.findViewById(R.id.followingRecyclerView);
 
@@ -84,13 +86,13 @@ public class FollowingFragment extends Fragment implements FollowingPresenter.Fo
 
         followingRecyclerView.addOnScrollListener(new FollowRecyclerViewPaginationScrollListener(layoutManager));
 
-        followingPresenter = new FollowingPresenter(this);
+        followingPresenter = new FollowingPresenter(this, token);
         followingRecyclerViewAdapter.loadMoreItems();
         return view;
     }
 
     @Override
-    public void displaymessage(String msg) {
+    public void displayMessage(String msg) {
         Toast.makeText(getContext(), msg, Toast.LENGTH_LONG).show();
     }
 
